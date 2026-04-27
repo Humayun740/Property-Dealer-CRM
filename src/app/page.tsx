@@ -12,7 +12,7 @@ export default function Home() {
           Property Dealer CRM
         </h1>
         <p className="mt-4 max-w-2xl text-slate-200">
-          Day 1 implementation of a full-stack CRM using Next.js App Router, MongoDB,
+          Full-stack CRM using Next.js App Router, MongoDB,
           JWT authentication, RBAC, and lead management with scoring.
         </p>
 
