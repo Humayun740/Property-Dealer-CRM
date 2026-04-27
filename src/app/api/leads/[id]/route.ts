@@ -58,6 +58,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 
   const updateData = { ...parsed.data };
+  const previousPriority = lead.priority;
+  const previousStatus = lead.status;
 
   if (!isAdmin) {
     delete updateData.assignedTo;
@@ -79,6 +81,32 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     message: "Lead details updated",
     meta: parsed.data,
   });
+
+  if (updatedLead && previousPriority !== updatedLead.priority) {
+    await logActivity({
+      leadId: id,
+      actorId: user.userId,
+      action: "lead.priority_changed",
+      message: `Lead priority changed from ${previousPriority} to ${updatedLead.priority}`,
+      meta: {
+        from: previousPriority,
+        to: updatedLead.priority,
+      },
+    });
+  }
+
+  if (updatedLead && previousStatus !== updatedLead.status) {
+    await logActivity({
+      leadId: id,
+      actorId: user.userId,
+      action: "lead.status_changed",
+      message: `Lead status changed from ${previousStatus} to ${updatedLead.status}`,
+      meta: {
+        from: previousStatus,
+        to: updatedLead.status,
+      },
+    });
+  }
 
   return NextResponse.json({ lead: updatedLead });
 }

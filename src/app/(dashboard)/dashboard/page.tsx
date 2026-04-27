@@ -12,6 +12,8 @@ export default async function DashboardPage() {
   }
 
   await connectDB();
+  const now = new Date();
+  const staleCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
   const baseFilter =
     user.role === "agent" ? { assignedTo: new Types.ObjectId(user.userId) } : {};
@@ -27,6 +29,18 @@ export default async function DashboardPage() {
     { $match: baseFilter },
     { $group: { _id: "$priority", count: { $sum: 1 } } },
   ]);
+
+  const overdueCount = await Lead.countDocuments({
+    ...baseFilter,
+    followUpDate: { $lt: now },
+    status: { $nin: ["Closed", "Lost"] },
+  });
+
+  const staleCount = await Lead.countDocuments({
+    ...baseFilter,
+    lastActivityAt: { $lt: staleCutoff },
+    status: { $nin: ["Closed", "Lost"] },
+  });
 
   const agentAgg =
     user.role === "admin"
@@ -47,7 +61,7 @@ export default async function DashboardPage() {
 
   return (
     <section className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl bg-white p-4 shadow-sm">
           <p className="text-sm text-slate-500">Total Leads</p>
           <p className="text-2xl font-bold text-slate-900">{totalLeads}</p>
@@ -69,6 +83,14 @@ export default async function DashboardPage() {
           <p className="text-2xl font-bold text-slate-700">
             {priorityAgg.find((item) => item._id === "Low")?.count || 0}
           </p>
+        </div>
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">Overdue Follow-ups</p>
+          <p className="text-2xl font-bold text-rose-700">{overdueCount}</p>
+        </div>
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="text-sm text-slate-500">Stale Leads (3+ days)</p>
+          <p className="text-2xl font-bold text-amber-700">{staleCount}</p>
         </div>
       </div>
 

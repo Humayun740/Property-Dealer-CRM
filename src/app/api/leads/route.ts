@@ -5,7 +5,10 @@ import { getRequestUser, hasRole } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createLeadSchema } from "@/lib/validators";
 import { logActivity } from "@/lib/activity";
+import { buildLeadAssignedEmail, buildNewLeadEmail } from "@/lib/email-templates";
+import { sendBulkEmail, sendEmail } from "@/lib/email";
 import Lead from "@/models/Lead";
+import User from "@/models/User";
 
 function getRateKey(userId: string, role: string) {
   const limit = role === "agent" ? 50 : 500;
@@ -107,6 +110,40 @@ export async function POST(request: NextRequest) {
     "assignedTo",
     "name email",
   );
+
+  const adminUsers = await User.find({ role: "admin" }).select("email");
+  const adminEmails = adminUsers.map((item) => item.email).filter(Boolean);
+
+  const newLeadEmail = buildNewLeadEmail({
+    leadName: lead.name,
+    propertyInterest: lead.propertyInterest,
+    budget: lead.budget,
+    priority: lead.priority,
+    source: lead.source,
+  });
+
+  await sendBulkEmail(adminEmails, newLeadEmail);
+
+  if (parsed.data.assignedTo) {
+    const assignedUser = await User.findById(parsed.data.assignedTo).select("name email");
+
+    if (assignedUser?.email) {
+      const assignmentEmail = buildLeadAssignedEmail({
+        agentName: assignedUser.name,
+        leadName: lead.name,
+        propertyInterest: lead.propertyInterest,
+        budget: lead.budget,
+        priority: lead.priority,
+      });
+
+      await sendEmail({
+        to: assignedUser.email,
+        subject: assignmentEmail.subject,
+        html: assignmentEmail.html,
+        text: assignmentEmail.text,
+      });
+    }
+  }
 
   return NextResponse.json({ lead: leadWithAssignee }, { status: 201 });
 }
