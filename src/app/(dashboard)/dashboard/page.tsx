@@ -30,6 +30,24 @@ export default async function DashboardPage() {
     { $group: { _id: "$priority", count: { $sum: 1 } } },
   ]);
 
+  const statusOrder = ["New", "Contacted", "In Progress", "Closed", "Lost"];
+  const priorityOrder = ["High", "Medium", "Low"];
+
+  const statusCounts = new Map(statusAgg.map((item) => [item._id, item.count]));
+  const priorityCounts = new Map(priorityAgg.map((item) => [item._id, item.count]));
+
+  const statusChart = statusOrder.map((label) => {
+    const count = statusCounts.get(label) || 0;
+    const percent = totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0;
+    return { label, count, percent };
+  });
+
+  const priorityChart = priorityOrder.map((label) => {
+    const count = priorityCounts.get(label) || 0;
+    const percent = totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0;
+    return { label, count, percent };
+  });
+
   const overdueCount = await Lead.countDocuments({
     ...baseFilter,
     followUpDate: { $lt: now },
@@ -128,6 +146,54 @@ export default async function DashboardPage() {
             </ul>
           </article>
         )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <article className="rounded-xl bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Status Chart</h2>
+          <div className="mt-3 space-y-3">
+            {statusChart.map((item) => (
+              <div key={item.label}>
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>{item.label}</span>
+                  <span>{item.count}</span>
+                </div>
+                <div className="mt-1 h-2 rounded-full bg-slate-100">
+                  <div
+                    className="h-2 rounded-full bg-emerald-500"
+                    style={{ width: `${item.percent}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-xl bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Priority Chart</h2>
+          <div className="mt-3 space-y-3">
+            {priorityChart.map((item) => (
+              <div key={item.label}>
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <span>{item.label}</span>
+                  <span>{item.count}</span>
+                </div>
+                <div className="mt-1 h-2 rounded-full bg-slate-100">
+                  <div
+                    className={`h-2 rounded-full ${
+                      item.label === "High"
+                        ? "bg-rose-500"
+                        : item.label === "Medium"
+                          ? "bg-amber-500"
+                          : "bg-slate-500"
+                    }`}
+                    style={{ width: `${item.percent}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
       </div>
     </section>
   );

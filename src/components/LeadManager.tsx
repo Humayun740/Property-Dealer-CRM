@@ -38,6 +38,12 @@ type ActivityItem = {
   };
 };
 
+type Suggestion = {
+  title: string;
+  action: string;
+  reason: string;
+};
+
 type Props = {
   role: "admin" | "agent";
 };
@@ -78,6 +84,7 @@ export default function LeadManager({ role }: Props) {
   const [timelineByLead, setTimelineByLead] = useState<Record<string, ActivityItem[]>>({});
   const [timelineOpenByLead, setTimelineOpenByLead] = useState<Record<string, boolean>>({});
   const [timelineLoadingByLead, setTimelineLoadingByLead] = useState<Record<string, boolean>>({});
+  const [suggestionsByLead, setSuggestionsByLead] = useState<Record<string, Suggestion>>({});
   const leadSnapshotRef = useRef<
     Record<string, { priority: string; assignedTo: string; updatedAt: string }>
   >({});
@@ -172,6 +179,10 @@ export default function LeadManager({ role }: Props) {
     const incomingLeads: Lead[] = data.leads || [];
     setLeads(incomingLeads);
 
+    if (incomingLeads.length > 0) {
+      void loadSuggestions(incomingLeads.map((lead) => lead._id));
+    }
+
     if (options?.compareLive) {
       detectLiveChanges(incomingLeads);
     } else {
@@ -191,6 +202,20 @@ export default function LeadManager({ role }: Props) {
 
     if (res.ok) {
       setAgents(data.agents || []);
+    }
+  }
+
+  async function loadSuggestions(ids: string[]) {
+    const params = new URLSearchParams();
+    params.set("ids", ids.join(","));
+
+    const res = await fetch(`/api/leads/suggestions?${params.toString()}`, {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setSuggestionsByLead(data.suggestions || {});
     }
   }
 
@@ -342,6 +367,41 @@ export default function LeadManager({ role }: Props) {
     setMessage("Lead deleted");
   }
 
+  async function handleExport(format: "csv") {
+    const params = new URLSearchParams();
+    params.set("format", format);
+
+    if (statusFilter) {
+      params.set("status", statusFilter);
+    }
+
+    if (priorityFilter) {
+      params.set("priority", priorityFilter);
+    }
+
+    if (search.trim()) {
+      params.set("q", search.trim());
+    }
+
+    const res = await fetch(`/api/leads/export?${params.toString()}`);
+    if (!res.ok) {
+      const data = await res.json();
+      setMessage(data.error || "Export failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const fileExt = format === "pdf" ? "pdf" : "csv";
+    link.href = url;
+    link.download = `leads-export.${fileExt}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   const overdueCount = useMemo(() => {
     return leads.filter(
       (lead) =>
@@ -481,6 +541,15 @@ export default function LeadManager({ role }: Props) {
           </button>
         </div>
 
+        <div className="mb-3 flex flex-wrap gap-2">
+          <button
+            onClick={() => void handleExport("csv")}
+            className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+          >
+            Export CSV (Excel)
+          </button>
+        </div>
+
         <div className="mb-3 flex flex-wrap gap-4 text-sm text-slate-700">
           <span>Total: {leads.length}</span>
           <span>Overdue follow-ups: {overdueCount}</span>
@@ -555,6 +624,18 @@ export default function LeadManager({ role }: Props) {
                   >
                     WhatsApp Chat
                   </a>
+                )}
+
+                {suggestionsByLead[lead._id] && (
+                  <div className="mt-3 rounded-md border border-emerald-100 bg-emerald-50 p-2 text-xs text-emerald-900">
+                    <p className="font-semibold">
+                      AI Suggestion: {suggestionsByLead[lead._id].title}
+                    </p>
+                    <p>{suggestionsByLead[lead._id].action}</p>
+                    <p className="text-emerald-700">
+                      Reason: {suggestionsByLead[lead._id].reason}
+                    </p>
+                  </div>
                 )}
 
                 <div className="mt-3 grid gap-2 md:grid-cols-4">

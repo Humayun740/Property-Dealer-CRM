@@ -35,8 +35,8 @@ export async function GET(request: NextRequest) {
 
   const filter: Record<string, unknown> = {};
 
-  if (user.role === "agent") {
-    filter.assignedTo = user.userId;
+  if (user.role !== "admin") {
+    filter.assignedTo = new Types.ObjectId(user.userId);
   }
 
   if (status) {

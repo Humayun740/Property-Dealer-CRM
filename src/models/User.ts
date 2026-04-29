@@ -10,6 +10,7 @@ const userSchema = new Schema(
   { timestamps: true },
 );
 
+
 export type UserDocument = InferSchemaType<typeof userSchema> & { _id: string };
 
 const User = models.User || model("User", userSchema);

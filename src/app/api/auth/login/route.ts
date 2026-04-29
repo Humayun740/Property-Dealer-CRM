@@ -37,6 +37,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    const firstAdmin = await User.findOne({ role: "admin" }).sort({ createdAt: 1 });
+    if (
+      user.role === "admin" &&
+      firstAdmin &&
+      String(firstAdmin._id) !== String(user._id)
+    ) {
+      user.role = "agent";
+      await user.save();
+    }
+
     const isPasswordCorrect = await comparePassword(parsed.data.password, user.password);
     if (!isPasswordCorrect) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

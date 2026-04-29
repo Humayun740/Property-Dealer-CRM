@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import LeadManager from "@/components/LeadManager";
 import { getServerUser } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function LeadsPage() {
   const user = await getServerUser();
 

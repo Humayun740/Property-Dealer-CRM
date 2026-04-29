@@ -35,6 +35,12 @@ export default async function DashboardLayout({
             >
               Leads
             </Link>
+            <Link
+              href="/dashboard/activity"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800"
+            >
+              Activity
+            </Link>
             <LogoutButton />
           </nav>
         </div>
