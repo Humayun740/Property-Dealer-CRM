@@ -1,9 +1,0 @@
-⚠ Port 3000 is in use by process 25100, using available port 3001 instead.
-⨯ Another next dev server is already running.
-
-- Local:        http://localhost:3000
-- PID:          25100
-- Dir:          C:\Users\Humayun\Desktop\uni\WEB 3\web3
-- Log:          .next\dev\logs\next-development.log
-
-Run taskkill /PID 25100 /F to stop it.
